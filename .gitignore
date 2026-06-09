@@ -7,6 +7,6 @@ logs/
 reports/
 backups/
 sandbox/
-metadata/
+metadata/metadata.db
 backup_verification.log
 report.json
