@@ -1,0 +1,12 @@
+# Ignore local SQLite databases, transaction logs, and temporary sandbox directories
+__pycache__/
+*.pyc
+*.db
+*.sqbpro
+logs/
+reports/
+backups/
+sandbox/
+metadata/
+backup_verification.log
+report.json
