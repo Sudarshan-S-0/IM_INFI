@@ -310,9 +310,10 @@ def run_server():
     # Setup simple console logging for web requests
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
     
-    server_address = ("", PORT)
+    port = int(os.environ.get("PORT", PORT))
+    server_address = ("0.0.0.0", port)
     httpd = HTTPServer(server_address, DashboardHTTPRequestHandler)
-    print(f"Dashboard server running at: http://localhost:{PORT}")
+    print(f"Dashboard server running at: http://0.0.0.0:{port}")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
