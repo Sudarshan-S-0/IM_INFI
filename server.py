@@ -218,7 +218,7 @@ If the query is not related to database errors, verification, database locking, 
     try:
         import requests
         api_key = os.environ.get("GEMINI_API_KEY", "AIzaSyB8ltvrf1u9_d5_TjKauocnkSUm2SqMK5Q")
-        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
         payload = {
             "contents": [
                 {
