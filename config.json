@@ -1,5 +1,5 @@
 {
-    "database_path": "backup/backup_huge_error.db",
+    "database_path": "backup/backup.db",
     "backup_directory": "backups",
     "sandbox_directory": "sandbox",
     "report_directory": "reports",
