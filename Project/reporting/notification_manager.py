@@ -67,7 +67,14 @@ Validation Details:
         github_ok = create_github_issue(config, issue_title, issue_body)
         outcomes["github"] = "SUCCESS" if github_ok else "FAILED"
         if metadata_store:
-            target_repo = f"{config.get('github_settings', {}).get('repository_owner', 'unknown')}/{config.get('github_settings', {}).get('repository_name', 'unknown')}"
+            gh_settings = config.get("github_settings", {})
+            owner = gh_settings.get("repository_owner", "Vannilavan05")
+            repo = gh_settings.get("repository_name", "IM_INFI")
+            if not owner or owner == "YOUR_GITHUB_OWNER":
+                owner = "Vannilavan05"
+            if not repo or repo == "YOUR_GITHUB_REPO":
+                repo = "IM_INFI"
+            target_repo = f"{owner}/{repo}"
             metadata_store.log_notification(
                 run_id=run_id,
                 notif_type="GitHub",
