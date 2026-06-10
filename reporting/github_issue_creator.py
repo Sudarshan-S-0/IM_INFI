@@ -15,8 +15,14 @@ def create_github_issue(config: dict, title: str, body: str) -> bool:
     owner = os.environ.get("GITHUB_OWNER", github_settings.get("repository_owner"))
     repo = os.environ.get("GITHUB_REPO", github_settings.get("repository_name"))
     
-    if not token or token == "YOUR_GITHUB_TOKEN" or not owner or owner == "YOUR_GITHUB_OWNER" or not repo or repo == "YOUR_GITHUB_REPO":
-        logger.warning("GitHub settings are incomplete. Skipping issue creation.")
+    # Auto-default if placeholders are present
+    if not owner or owner == "YOUR_GITHUB_OWNER":
+        owner = "Vannilavan05"
+    if not repo or repo == "YOUR_GITHUB_REPO":
+        repo = "IM_INFI"
+        
+    if not token or token == "YOUR_GITHUB_TOKEN":
+        logger.warning("GitHub token is not set up. Skipping issue creation.")
         return False
         
     url = f"https://api.github.com/repos/{owner}/{repo}/issues"

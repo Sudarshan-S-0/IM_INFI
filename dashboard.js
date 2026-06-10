@@ -143,10 +143,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // Detail modal display
-    function showExecutionDetails(runId) {
+    // Detail modal display
+    async function showExecutionDetails(runId) {
         const exec = executionsCache.find(e => e.run_id === runId);
         if (!exec) return;
         
+        let notificationsHtml = "";
+        try {
+            const res = await fetch(`/api/notifications?run_id=${runId}`);
+            if (res.ok) {
+                const notifs = await res.json();
+                if (notifs.length > 0) {
+                    notificationsHtml = `
+                        <div class="results-modal-row" style="flex-direction: column; align-items: flex-start; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px;">
+                            <span class="results-modal-label">Notification Dispatches</span>
+                            <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
+                                ${notifs.map(n => {
+                                    const isGithub = n.type === "GitHub";
+                                    const badgeClass = n.status === "SUCCESS" ? "badge-pass" : "badge-fail";
+                                    let displayTarget = n.target;
+                                    if (isGithub && n.status === "SUCCESS" && !n.target.includes("unknown")) {
+                                        displayTarget = `<a href="https://github.com/${n.target}/issues" target="_blank" style="color: var(--accent-blue); text-decoration: underline; word-break: break-all;">https://github.com/${n.target}/issues</a>`;
+                                    }
+                                    return `
+                                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; gap: 12px;">
+                                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                                <strong>${n.type} Alert</strong>
+                                                <span style="font-size: 12px; color: var(--text-secondary);">${displayTarget}</span>
+                                                ${n.error_message ? `<span style="font-size: 11px; color: var(--accent-ruby);">${n.error_message}</span>` : ""}
+                                            </div>
+                                            <span class="badge ${badgeClass}">${n.status}</span>
+                                        </div>
+                                    `;
+                                }).join("")}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } catch (e) {
+            console.error("Error fetching notifications details:", e);
+        }
+
         modalContent.innerHTML = `
             <div class="results-modal-grid">
                 <div class="results-modal-row">
@@ -165,14 +203,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span class="results-modal-label">Overall Status</span>
                     <span class="badge ${exec.validation_status === "PASS" ? "badge-pass" : "badge-fail"}">${exec.validation_status}</span>
                 </div>
-                <div class="results-modal-row">
+                <div class="results-modal-row" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px;">
                     <span class="results-modal-label">Report Saved Path</span>
                     <code>${exec.report_path}</code>
                 </div>
+                
+                ${notificationsHtml}
+                
                 ${exec.error_details ? `
                 <div class="results-modal-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
                     <span class="results-modal-label" style="color: var(--accent-ruby)">Error Context</span>
-                    <pre style="width: 100%; white-space: pre-wrap; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;">${exec.error_details}</pre>
+                    <pre style="width: 100%; white-space: pre-wrap; font-family: monospace; font-size: 12px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,60,107,0.15);">${exec.error_details}</pre>
                 </div>
                 ` : ""}
             </div>
@@ -295,11 +336,43 @@ document.addEventListener("DOMContentLoaded", () => {
                 receiverInput.disabled = false;
             }
             
+            // Fetch workspace database files dynamically
+            await fetchDatabases();
+            
         } catch (err) {
             console.error(err);
             showToast(`Error loading configuration: ${err.message}`, "error");
         }
     }
+
+    const selectDetectedDb = document.getElementById("select-detected-db");
+
+    async function fetchDatabases() {
+        try {
+            const res = await fetch("/api/databases");
+            if (!res.ok) throw new Error("Could not retrieve available databases.");
+            const dbs = await res.json();
+            
+            // Clear dropdown options but keep title
+            selectDetectedDb.innerHTML = '<option value="">-- Detect DB --</option>';
+            dbs.forEach(db => {
+                if (db.error) return;
+                const opt = document.createElement("option");
+                opt.value = db.path;
+                opt.textContent = `${db.name} (${db.size_kb} KB)`;
+                selectDetectedDb.appendChild(opt);
+            });
+        } catch (err) {
+            console.error("Error listing workspace databases:", err);
+        }
+    }
+
+    selectDetectedDb.addEventListener("change", (e) => {
+        if (e.target.value) {
+            document.getElementById("input-db-path").value = e.target.value;
+            showToast(`Selected source database: ${e.target.value}`, "success");
+        }
+    });
 
     // Save configuration form POST handler
     configForm.addEventListener("submit", async (e) => {

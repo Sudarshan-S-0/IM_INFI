@@ -1,5 +1,5 @@
 {
-    "database_path": "backup/backup.db",
+    "database_path": "backup/backup_huge_error.db",
     "backup_directory": "backups",
     "sandbox_directory": "sandbox",
     "report_directory": "reports",
@@ -80,6 +80,23 @@
                 "users": "89e24979043f200cdafb98cb68eb62ef3d28feca3b3fb05559ad3b5bae2d694e",
                 "orders": "bcc2f93148098305c0a645d5aa38c685791b4bcea98fc3b925f7aa33c49ef9b8",
                 "products": "c6d3fd1ebde8ee7f3b422baeae70c9167d9d2834f42381a4eb3f6aaa0bfae05f"
+            }
+        },
+        "backup_huge_error.db": {
+            "expected_tables": [
+                "users",
+                "orders",
+                "products"
+            ],
+            "expected_counts": {
+                "users": 50000,
+                "orders": 50000,
+                "products": 50000
+            },
+            "expected_checksums": {
+                "users": "9e0ad89fb34608504b5bd0c1c6b64fb7acacec6ff3b50d13fb8641f16c63e486",
+                "orders": "1af7b1239d5896725f144591b0b10bf557870bc7f065079b6f04963c286d9146",
+                "products": "68912464d8a050ec6cddc478a9d8a004be77d78d53d869382d0c67ecc986be4e"
             }
         }
     }
