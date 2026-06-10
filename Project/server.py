@@ -172,10 +172,29 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
                     
-                    # Search using the JSON equivalent filename
-                    json_filename = requested_file.replace(".txt", ".json")
-                    cursor.execute("SELECT * FROM executions WHERE report_path LIKE ? LIMIT 1;", (f"%{json_filename}",))
+                    # Normalize search: always search by the JSON variant of the filename
+                    base_name = requested_file
+                    if base_name.endswith(".txt"):
+                        base_name = base_name[:-4] + ".json"
+                    
+                    # Strategy 1: Match by report_path LIKE
+                    cursor.execute("SELECT * FROM executions WHERE report_path LIKE ? LIMIT 1;", (f"%{base_name}%",))
                     exec_row = cursor.fetchone()
+                    
+                    # Strategy 2: Match by timestamp extracted from filename (e.g. report_20260610_091956)
+                    if not exec_row:
+                        import re
+                        ts_match = re.search(r"(\d{8}_\d{6})", requested_file)
+                        if ts_match:
+                            ts_str = ts_match.group(1)
+                            cursor.execute("SELECT * FROM executions WHERE report_path LIKE ? LIMIT 1;", (f"%{ts_str}%",))
+                            exec_row = cursor.fetchone()
+                    
+                    # Strategy 3: Match by run_id if the filename is a UUID
+                    if not exec_row:
+                        name_no_ext = requested_file.rsplit(".", 1)[0]
+                        cursor.execute("SELECT * FROM executions WHERE run_id = ? LIMIT 1;", (name_no_ext,))
+                        exec_row = cursor.fetchone()
                     
                     if exec_row:
                         run_id = exec_row["run_id"]
@@ -241,6 +260,8 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                             
                             self.wfile.write("\n".join(txt_content).encode("utf-8"))
                         return
+                    else:
+                        conn.close()
                 except Exception as e:
                     logger.error(f"Failed to dynamically generate report: {e}")
 
