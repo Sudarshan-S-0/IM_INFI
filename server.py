@@ -106,6 +106,34 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(db_files).encode("utf-8"))
             return
 
+        # API: Get notifications for a run
+        elif self.path.startswith("/api/notifications"):
+            from urllib.parse import urlparse, parse_qs
+            query = urlparse(self.path).query
+            params = parse_qs(query)
+            run_id = params.get("run_id", [""])[0]
+            
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            
+            db_path = Path("metadata/metadata.db")
+            notifications = []
+            if db_path.exists() and run_id:
+                try:
+                    conn = sqlite3.connect(db_path)
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT * FROM notifications WHERE run_id = ? ORDER BY timestamp ASC;", (run_id,))
+                    rows = cursor.fetchall()
+                    for r in rows:
+                        notifications.append(dict(r))
+                    conn.close()
+                except Exception as e:
+                    notifications = [{"error": str(e)}]
+            self.wfile.write(json.dumps(notifications).encode("utf-8"))
+            return
+
         if self.path.startswith("/reports/"):
             requested_file = os.path.basename(self.path)
             full_path = Path("reports") / requested_file
