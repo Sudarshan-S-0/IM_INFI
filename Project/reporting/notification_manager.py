@@ -35,7 +35,7 @@ Validation Details:
     import os
     gmail_settings = config.get("gmail_settings", {})
     sender = os.environ.get("SENDER_EMAIL", gmail_settings.get("sender_email"))
-    password = os.environ.get("SENDER_PASSWORD", gmail_settings.get("sender_password"))
+    password = os.environ.get("SENDER_PASSWORD", os.environ.get("APP_PASSWORD", gmail_settings.get("sender_password")))
     receiver = os.environ.get("RECEIVER_EMAIL", gmail_settings.get("receiver_email"))
     
     gmail_enabled = gmail_settings.get("enabled", False)
