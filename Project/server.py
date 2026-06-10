@@ -5,6 +5,11 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+
+# Self-healing working directory alignment
+if Path("Project").is_dir() and not Path("server.py").exists():
+    os.chdir("Project")
+
 from workflow_agent.orchestrator import run_backup_verification_workflow
 
 PORT = 8000
@@ -14,6 +19,12 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Override to suppress standard HTTP logging in terminal if desired, or redirect to logger
         logger.info("%s - - [%s] %s" % (self.address_string(), self.log_date_time_string(), format%args))
+
+    def do_HEAD(self):
+        # Respond to Render health checks
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.end_headers()
 
     def do_GET(self):
         # API: Get execution history
