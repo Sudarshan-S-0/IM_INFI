@@ -83,7 +83,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                         config_data = json.load(f)
                     # Expose environment override status to frontend UI
                     config_data["env_sender_active"] = "SENDER_EMAIL" in os.environ
-                    config_data["env_password_active"] = "SENDER_PASSWORD" in os.environ
+                    config_data["env_password_active"] = "SENDER_PASSWORD" in os.environ or "APP_PASSWORD" in os.environ
                     config_data["env_receiver_active"] = "RECEIVER_EMAIL" in os.environ
                     config_data["env_github_token_active"] = "GITHUB_TOKEN" in os.environ
                     config_data["env_github_owner_active"] = "GITHUB_OWNER" in os.environ
