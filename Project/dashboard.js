@@ -473,28 +473,54 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch("/api/run", { method: "POST" });
             const data = await res.json();
             
-            if (data.success) {
-                if (data.result === "PASS") {
-                    showToast("Verification PASS! Backup is complete and fully validated.", "success");
-                } else {
-                    showToast("Verification FAIL! Database validation checks encountered errors.", "error");
-                }
-                
-                // Refresh execution logs and list views
-                await fetchExecutions();
-                await fetchLogs();
-                
-                // Open modal detail for the newest run immediately
-                if (executionsCache.length > 0) {
-                    showExecutionDetails(executionsCache[0].run_id);
-                }
-            } else {
-                throw new Error(data.error || "Failed to complete run.");
+            if (!data.success) {
+                throw new Error(data.error || "Failed to start run.");
             }
+            
+            // Poll for completion
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusRes = await fetch("/api/run-status");
+                    const statusData = await statusRes.json();
+                    
+                    if (statusData.status === "done") {
+                        clearInterval(pollInterval);
+                        
+                        const result = statusData.result;
+                        if (result && result.success) {
+                            if (result.result === "PASS") {
+                                showToast("Verification PASS! Backup is complete and fully validated.", "success");
+                            } else {
+                                showToast("Verification FAIL! Database validation checks encountered errors.", "error");
+                            }
+                        } else {
+                            showToast(`Verification completed with error: ${result?.error || "Unknown"}`, "error");
+                        }
+                        
+                        // Refresh execution logs and list views
+                        await fetchExecutions();
+                        await fetchLogs();
+                        
+                        // Open modal detail for the newest run immediately
+                        if (executionsCache.length > 0) {
+                            showExecutionDetails(executionsCache[0].run_id);
+                        }
+                        
+                        triggerRunBtn.disabled = false;
+                        btnSpinner.style.display = "none";
+                        btnText.textContent = "⚡ Trigger Run";
+                    } else if (statusData.status === "running") {
+                        btnText.textContent = "⏳ Running...";
+                    }
+                } catch (pollErr) {
+                    // Silently retry on poll errors
+                    console.error("Poll error:", pollErr);
+                }
+            }, 2000); // Poll every 2 seconds
+            
         } catch (err) {
             console.error(err);
             showToast(`Workflow execution failed: ${err.message}`, "error");
-        } finally {
             triggerRunBtn.disabled = false;
             btnSpinner.style.display = "none";
             btnText.textContent = "⚡ Trigger Run";
