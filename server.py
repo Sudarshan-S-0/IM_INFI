@@ -3,7 +3,7 @@ import json
 import sqlite3
 import logging
 from pathlib import Path
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from workflow_agent.orchestrator import run_backup_verification_workflow
 
 PORT = 8000
@@ -344,7 +344,7 @@ def run_server():
     
     port = int(os.environ.get("PORT", PORT))
     server_address = ("0.0.0.0", port)
-    httpd = HTTPServer(server_address, DashboardHTTPRequestHandler)
+    httpd = ThreadingHTTPServer(server_address, DashboardHTTPRequestHandler)
     print(f"Dashboard server running at: http://0.0.0.0:{port}")
     try:
         httpd.serve_forever()
