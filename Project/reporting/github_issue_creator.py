@@ -28,7 +28,8 @@ def create_github_issue(config: dict, title: str, body: str) -> bool:
     url = f"https://api.github.com/repos/{owner}/{repo}/issues"
     headers = {
         "Authorization": f"token {token}",
-        "Accept": "application/vnd.github.v3+json"
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "Backup-Verification-Simulator"
     }
     payload = {
         "title": title,
@@ -40,10 +41,14 @@ def create_github_issue(config: dict, title: str, body: str) -> bool:
         response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.status_code == 201:
             logger.info("GitHub Issue created successfully.")
-            return True
+            try:
+                res_data = response.json()
+                return res_data.get("html_url")
+            except Exception:
+                return "https://github.com/" + owner + "/" + repo + "/issues"
         else:
             logger.error(f"Failed to create GitHub Issue. Status Code: {response.status_code}, Response: {response.text}")
-            return False
+            return None
     except Exception as e:
         logger.error(f"Error while calling GitHub API: {e}")
-        return False
+        return None

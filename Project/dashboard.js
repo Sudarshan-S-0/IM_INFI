@@ -163,7 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                     const badgeClass = n.status === "SUCCESS" ? "badge-pass" : "badge-fail";
                                     let displayTarget = n.target;
                                     if (isGithub && n.status === "SUCCESS" && !n.target.includes("unknown")) {
-                                        displayTarget = `<a href="https://github.com/${n.target}/issues" target="_blank" style="color: var(--accent-blue); text-decoration: underline; word-break: break-all;">https://github.com/${n.target}/issues</a>`;
+                                        const url = n.target.startsWith("http") ? n.target : `https://github.com/${n.target}/issues`;
+                                        displayTarget = `<a href="${url}" target="_blank" style="color: var(--accent-blue); text-decoration: underline; word-break: break-all;">${url}</a>`;
                                     }
                                     return `
                                         <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; gap: 12px;">

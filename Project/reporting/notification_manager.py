@@ -64,7 +64,8 @@ Validation Details:
 {validation_results.get('error', 'No trace output.')}
 ```
 """
-        github_ok = create_github_issue(config, issue_title, issue_body)
+        github_url = create_github_issue(config, issue_title, issue_body)
+        github_ok = bool(github_url)
         outcomes["github"] = "SUCCESS" if github_ok else "FAILED"
         if metadata_store:
             gh_settings = config.get("github_settings", {})
@@ -74,12 +75,12 @@ Validation Details:
                 owner = "Vannilavan05"
             if not repo or repo == "YOUR_GITHUB_REPO":
                 repo = "IM_INFI"
-            target_repo = f"{owner}/{repo}"
+            target_val = github_url if github_ok else f"{owner}/{repo}"
             metadata_store.log_notification(
                 run_id=run_id,
                 notif_type="GitHub",
                 status="SUCCESS" if github_ok else "FAIL",
-                target=target_repo,
+                target=target_val,
                 error_message=None if github_ok else "Check logs for GitHub API error"
             )
     else:
