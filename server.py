@@ -73,6 +73,9 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                     config_data["env_sender_active"] = "SENDER_EMAIL" in os.environ
                     config_data["env_password_active"] = "SENDER_PASSWORD" in os.environ
                     config_data["env_receiver_active"] = "RECEIVER_EMAIL" in os.environ
+                    config_data["env_github_token_active"] = "GITHUB_TOKEN" in os.environ
+                    config_data["env_github_owner_active"] = "GITHUB_OWNER" in os.environ
+                    config_data["env_github_repo_active"] = "GITHUB_REPO" in os.environ
                 except Exception as e:
                     config_data = {"error": str(e)}
             self.wfile.write(json.dumps(config_data).encode("utf-8"))
