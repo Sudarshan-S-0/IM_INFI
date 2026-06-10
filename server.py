@@ -94,6 +94,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
         file_map = {
             "/": "index.html",
             "/index.html": "index.html",
+            "/dashboard.html": "dashboard.html",
             "/dashboard.css": "dashboard.css",
             "/dashboard.js": "dashboard.js"
         }
@@ -120,6 +121,33 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"File not found.")
 
     def do_POST(self):
+        # API: Authentication Login Verification
+        if self.path == "/api/login":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            
+            response_data = {"authenticated": False}
+            try:
+                credentials = json.loads(post_data.decode("utf-8"))
+                username = credentials.get("username", "")
+                password = credentials.get("password", "")
+                
+                # Check environment variables or defaults
+                expected_user = os.environ.get("ADMIN_USER", "admin")
+                expected_pass = os.environ.get("ADMIN_PASSWORD", "admin123")
+                
+                if username == expected_user and password == expected_pass:
+                    response_data = {"authenticated": True}
+            except Exception as e:
+                response_data = {"authenticated": False, "error": str(e)}
+                
+            self.wfile.write(json.dumps(response_data).encode("utf-8"))
+            return
+
         # API: Trigger backup verification workflow run
         if self.path == "/api/run":
             self.send_response(200)

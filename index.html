@@ -3,254 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IM_INFI - Backup Verification Simulator</title>
-    <meta name="description" content="Production-style database backup verification monitoring dashboard.">
+    <title>IM_INFI - Verification Login</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
-    <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="dashboard.css">
+    <style>
+        :root {
+            --bg-dark: #0a0b10;
+            --card-bg: rgba(18, 20, 32, 0.65);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f1f3f9;
+            --text-secondary: #949db2;
+            --accent-blue: #00d2ff;
+            --accent-blue-glow: rgba(0, 210, 255, 0.35);
+            --accent-ruby: #ff3c6b;
+            --font-heading: 'Space Grotesk', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        .glass-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, rgba(0, 210, 255, 0.08) 0%, transparent 50%);
+            background-size: cover;
+        }
+        .login-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: slideUp 0.5s ease-out forwards;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .logo-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        h2 {
+            font-family: var(--font-heading);
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 40%, var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px var(--accent-blue-glow);
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            font-family: var(--font-heading);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            background: linear-gradient(135deg, var(--accent-blue), #0084ff);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+            transition: all 0.2s ease;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 210, 255, 0.5);
+        }
+        .error-message {
+            color: var(--accent-ruby);
+            font-size: 13px;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <div class="glass-bg"></div>
-
-    <header class="app-header">
-        <div class="brand">
-            <span class="logo-icon">🛡️</span>
-            <h1>IM_INFI <span class="sub-title">Verification Hub</span> <span class="timezone-badge" style="font-size: 11px; font-weight: normal; color: var(--accent-amber); background: rgba(255, 183, 3, 0.08); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255, 183, 3, 0.15); margin-left: 8px;">IST Sync (UTC+5:30)</span></h1>
-        </div>
-        <div class="header-actions">
-            <button id="trigger-run-btn" class="btn btn-primary btn-glow">
-                <span class="spinner" id="btn-spinner"></span>
-                <span class="btn-text">⚡ Trigger Run</span>
-            </button>
-        </div>
-    </header>
-
-    <main class="app-layout">
-        <!-- Stats Summary Section -->
-        <section class="stats-grid" id="stats-section">
-            <div class="stat-card glass-card">
-                <span class="stat-icon text-cyan">🔄</span>
-                <div class="stat-info">
-                    <span class="stat-label">Total Executions</span>
-                    <h3 id="stat-total-runs">0</h3>
-                </div>
+    <div class="login-card">
+        <span class="logo-icon">🛡️</span>
+        <h2>IM_INFI</h2>
+        <div class="subtitle">Secure Verification System Sign In</div>
+        <div class="error-message" id="error-box">Invalid username or password.</div>
+        <form id="login-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" required autocomplete="username">
             </div>
-            <div class="stat-card glass-card">
-                <span class="stat-icon text-emerald">✅</span>
-                <div class="stat-info">
-                    <span class="stat-label">Success Rate</span>
-                    <h3 id="stat-success-rate">0%</h3>
-                </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required autocomplete="current-password">
             </div>
-            <div class="stat-card glass-card">
-                <span class="stat-icon text-purple">📂</span>
-                <div class="stat-info">
-                    <span class="stat-label">Target Database</span>
-                    <h3 id="stat-target-db">backup.db</h3>
-                </div>
-            </div>
-            <div class="stat-card glass-card">
-                <span class="stat-icon text-amber">🕒</span>
-                <div class="stat-info">
-                    <span class="stat-label">Last Status</span>
-                    <h3 id="stat-last-status">N/A</h3>
-                </div>
-            </div>
-        </section>
-
-        <!-- Navigation Tabs -->
-        <nav class="nav-tabs" id="main-navigation">
-            <button class="tab-link active" data-tab="runs-tab" id="nav-runs-tab">📊 Execution History</button>
-            <button class="tab-link" data-tab="config-tab" id="nav-config-tab">⚙️ Settings Manager</button>
-            <button class="tab-link" data-tab="logs-tab" id="nav-logs-tab">📜 Log Console</button>
-            <button class="tab-link" data-tab="ai-tab" id="nav-ai-tab">🤖 AI Assistant</button>
-        </nav>
-
-        <!-- Tab Content Areas -->
-        <section class="tab-contents">
-            
-            <!-- Tab 1: Execution Runs History -->
-            <div class="tab-panel active" id="runs-tab">
-                <div class="glass-card table-container">
-                    <table class="data-table" id="runs-table">
-                        <thead>
-                            <tr>
-                                <th>Execution ID</th>
-                                <th>Timestamp</th>
-                                <th>Backup File</th>
-                                <th>Report Data</th>
-                                <th>Failure Reason</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="runs-table-body">
-                            <tr>
-                                <td colspan="6" class="loading-state">Fetching verification runs...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Tab 2: Settings Configuration Editor -->
-            <div class="tab-panel" id="config-tab">
-                <div class="glass-card config-container">
-                    <h2>Configuration Settings</h2>
-                    <p class="section-desc">Manage paths, scheduler interval parameters, retry configurations, and dispatch details.</p>
-                    <form id="config-form" class="config-form">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="input-db-path">Database Source Path</label>
-                                <input type="text" id="input-db-path" name="database_path" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="input-backup-dir">Backup Storage Directory</label>
-                                <input type="text" id="input-backup-dir" name="backup_directory" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="input-sandbox-dir">Isolated Sandbox Directory</label>
-                                <input type="text" id="input-sandbox-dir" name="sandbox_directory" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="input-report-dir">Reports Output Folder</label>
-                                <input type="text" id="input-report-dir" name="report_directory" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="input-retention">Backup Retention (Days)</label>
-                                <input type="number" id="input-retention" name="retention_days" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="select-scheduler-mode">Scheduler Mode</label>
-                                <select id="select-scheduler-mode" name="scheduler_mode">
-                                    <option value="manual">Manual (Disabled)</option>
-                                    <option value="daily">Daily Run</option>
-                                    <option value="hourly">Hourly Run</option>
-                                    <option value="every_n_minutes">Every N Minutes</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="input-retry-count">Retry Count limit</label>
-                                <input type="number" id="input-retry-count" name="retry_count" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="input-retry-delay">Retry Wait Delay (Seconds)</label>
-                                <input type="number" id="input-retry-delay" name="retry_delay_seconds" required>
-                            </div>
-                        </div>
-
-                        <div class="form-section-title">GitHub Notifier Integration</div>
-                        <div class="form-grid">
-                            <div class="form-group col-checkbox">
-                                <input type="checkbox" id="check-github-enable" name="github_enabled">
-                                <label for="check-github-enable" class="label-inline">Enable Failure Issues Creation</label>
-                            </div>
-                            <div class="form-group">
-                                <label for="input-github-token">GitHub Personal Token</label>
-                                <input type="password" id="input-github-token" name="github_token">
-                            </div>
-                            <div class="form-group">
-                                <label for="input-github-owner">Repository Owner (Username)</label>
-                                <input type="text" id="input-github-owner" name="repository_owner">
-                            </div>
-                            <div class="form-group">
-                                <label for="input-github-repo">Repository Name</label>
-                                <input type="text" id="input-github-repo" name="repository_name">
-                            </div>
-                        </div>
-
-                        <div class="form-section-title">Gmail SMTP Alert Notifier</div>
-                        <div class="form-grid">
-                            <div class="form-group col-checkbox">
-                                <input type="checkbox" id="check-gmail-enable" name="gmail_enabled">
-                                <label for="check-gmail-enable" class="label-inline">Enable Email Reports Dispatch</label>
-                            </div>
-                            <div class="form-group">
-                                <label for="input-gmail-sender">Sender Email Address</label>
-                                <input type="email" id="input-gmail-sender" name="sender_email">
-                            </div>
-                            <div class="form-group">
-                                <label for="input-gmail-password">Google App Password</label>
-                                <input type="password" id="input-gmail-password" name="sender_password">
-                            </div>
-                            <div class="form-group">
-                                <label for="input-gmail-receiver">Receiver Email Address</label>
-                                <input type="email" id="input-gmail-receiver" name="receiver_email">
-                            </div>
-                        </div>
-
-                        <div class="form-actions">
-                            <button type="submit" id="save-config-btn" class="btn btn-secondary">💾 Save Configurations</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Tab 3: System Log Stream Viewer -->
-            <div class="tab-panel" id="logs-tab">
-                <div class="glass-card logs-container">
-                    <div class="logs-header">
-                        <h2>System Verification Logs</h2>
-                        <button id="clear-logs-view-btn" class="btn btn-clear">Clear View</button>
-                    </div>
-                    <pre class="log-console" id="log-console-output">Loading console activity feed...</pre>
-                </div>
-            </div>
-
-            <!-- Tab 4: AI Rectification Assistant -->
-            <div class="tab-panel" id="ai-tab">
-                <div class="glass-card ai-container" style="display: flex; flex-direction: column; height: 600px; gap: 20px;">
-                    <div class="ai-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2>AI Rectification Assistant</h2>
-                        <span class="badge badge-pass" id="ai-status-indicator">Connected</span>
-                    </div>
-                    
-                    <div class="ai-error-context glass-card" style="padding: 14px 20px; background: rgba(255, 60, 107, 0.05); border-color: rgba(255, 60, 107, 0.15);">
-                        <span style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase;">Active Error Context:</span>
-                        <div id="ai-active-error" style="font-family: monospace; font-size: 13px; margin-top: 6px; color: var(--accent-ruby); max-height: 80px; overflow-y: auto;">No active validation error detected.</div>
-                    </div>
-                    
-                    <div class="ai-quick-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn btn-secondary btn-clear" id="ai-suggest-explain" style="padding: 6px 12px; font-size: 12px;">🔍 Explain Last Error</button>
-                        <button class="btn btn-secondary btn-clear" id="ai-suggest-checksum" style="padding: 6px 12px; font-size: 12px;">🔑 How to fix Checksums?</button>
-                        <button class="btn btn-secondary btn-clear" id="ai-suggest-counts" style="padding: 6px 12px; font-size: 12px;">📊 How to fix Row Counts?</button>
-                    </div>
-                    
-                    <div class="ai-chat-log" id="ai-chat-feed" style="flex-grow: 1; overflow-y: auto; background: rgba(5, 5, 8, 0.6); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 16px;">
-                        <div class="ai-msg bot" style="background: rgba(255, 255, 255, 0.03); padding: 12px 16px; border-radius: 12px 12px 12px 0; border: 1px solid var(--border-color); max-width: 85%; align-self: flex-start; line-height: 1.5;">
-                            <strong>🤖 System Assistant:</strong> Hello! I am your AI Database Expert. Ask me anything about verification failures, SQLite database locks, integrity checks, or dynamic validation rules.
-                        </div>
-                    </div>
-                    
-                    <form id="ai-query-form" style="display: flex; gap: 12px;">
-                        <input type="text" id="ai-query-input" placeholder="Type your question about database errors and fixes..." style="flex-grow: 1; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; color: var(--text-primary); font-family: var(--font-body); font-size: 14px; outline: none;" required>
-                        <button type="submit" class="btn btn-primary" id="ai-send-btn">Send ➡️</button>
-                    </form>
-                </div>
-            </div>
-
-        </section>
-    </main>
-
-    <!-- Run Modal Dialog -->
-    <div class="modal-overlay" id="report-modal">
-        <div class="modal-card glass-card">
-            <div class="modal-header">
-                <h2>Execution Run Summary</h2>
-                <button class="modal-close-btn" id="close-modal-btn">&times;</button>
-            </div>
-            <div class="modal-body" id="modal-report-content">
-                <!-- Injected via javascript -->
-            </div>
-        </div>
+            <button type="submit" class="btn">Authenticate</button>
+        </form>
     </div>
-
-    <!-- Toast alerts -->
-    <div class="toast" id="toast-notification">Notification message</div>
-
-    <!-- Script Entry -->
-    <script src="dashboard.js"></script>
+    <script>
+        const form = document.getElementById("login-form");
+        const errorBox = document.getElementById("error-box");
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            errorBox.style.display = "none";
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
+            try {
+                const res = await fetch("/api/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.authenticated) {
+                        // Redirect to main dashboard page
+                        window.location.href = "/dashboard.html";
+                    } else {
+                        errorBox.style.display = "block";
+                    }
+                } else {
+                    errorBox.style.display = "block";
+                }
+            } catch (err) {
+                errorBox.style.display = "block";
+            }
+        });
+    </script>
 </body>
 </html>
