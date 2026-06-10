@@ -412,7 +412,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 level: "INFO",
                 file_path: "logs/backup_verification.log"
             },
-            validation_metrics: {
+            validation_metrics: config_cache.validation_metrics || {
                 "backup.db": {
                     "expected_tables": ["users", "orders", "products"],
                     "expected_counts": { "users": 3, "orders": 3, "products": 3 },
@@ -420,24 +420,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         "users": "dfd7ed9f21512bee326e4f877fdcc585574137bc0fd326739bc461ee71641205",
                         "orders": "f1895a2d95312281a5e6e77672e826d827975f338c44e5e0f98984610a6af61d",
                         "products": "5080070d5b9a9e08f93174feff6dd1b1cfeccae9dfeb76952a8959892286c1d6"
-                    }
-                },
-                "backup_new.db": {
-                    "expected_tables": ["users", "orders", "products"],
-                    "expected_counts": { "users": 4, "orders": 4, "products": 4 },
-                    "expected_checksums": {
-                        "users": "b06940bde3c740413e9c5144d54260871a5e4da1838a0b2f1269905c95bf0bd0",
-                        "orders": "d504419cc9e8309b1f3db1d58e38466e382292173db44866a1fa0897a7271e9e",
-                        "products": "30c502b54c8fa4a33b9a4ad154d34b16f396a9d107f3601d2ee78e88f307f3de"
-                    }
-                },
-                "backup_dummy.db": {
-                    "expected_tables": ["users", "orders", "products"],
-                    "expected_counts": { "users": 5, "orders": 5, "products": 5 },
-                    "expected_checksums": {
-                        "users": "89e24979043f200cdafb98cb68eb62ef3d28feca3b3fb05559ad3b5bae2d694e",
-                        "orders": "bcc2f93148098305c0a645d5aa38c685791b4bcea98fc3b925f7aa33c49ef9b8",
-                        "products": "c6d3fd1ebde8ee7f3b422baeae70c9167d9d2834f42381a4eb3f6aaa0bfae05f"
                     }
                 }
             }
