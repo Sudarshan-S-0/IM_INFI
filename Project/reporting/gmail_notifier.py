@@ -33,8 +33,8 @@ def send_gmail_notification(config: dict, subject: str, body_text: str, is_html:
     
     try:
         logger.info(f"Sending email notification to {receiver} via {smtp_server}:{smtp_port}")
-        # Connect to server
-        server = smtplib.SMTP(smtp_server, smtp_port)
+        # Connect to server with a 5-second timeout to prevent hanging
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=5)
         server.ehlo()
         server.starttls()  # Upgrade connection to secure TLS
         server.ehlo()

@@ -5,6 +5,11 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+
+# Self-healing working directory alignment
+if Path("Project").is_dir() and not Path("server.py").exists():
+    os.chdir("Project")
+
 from workflow_agent.orchestrator import run_backup_verification_workflow
 
 PORT = 8000
@@ -14,6 +19,12 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Override to suppress standard HTTP logging in terminal if desired, or redirect to logger
         logger.info("%s - - [%s] %s" % (self.address_string(), self.log_date_time_string(), format%args))
+
+    def do_HEAD(self):
+        # Respond to Render health checks
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.end_headers()
 
     def do_GET(self):
         # API: Get execution history
@@ -77,6 +88,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                     config_data["env_github_token_active"] = "GITHUB_TOKEN" in os.environ
                     config_data["env_github_owner_active"] = "GITHUB_OWNER" in os.environ
                     config_data["env_github_repo_active"] = "GITHUB_REPO" in os.environ
+                    config_data["env_groq_active"] = "GROQ_API_KEY" in os.environ
                 except Exception as e:
                     config_data = {"error": str(e)}
             self.wfile.write(json.dumps(config_data).encode("utf-8"))
@@ -160,10 +172,29 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
                     
-                    # Search using the JSON equivalent filename
-                    json_filename = requested_file.replace(".txt", ".json")
-                    cursor.execute("SELECT * FROM executions WHERE report_path LIKE ? LIMIT 1;", (f"%{json_filename}",))
+                    # Normalize search: always search by the JSON variant of the filename
+                    base_name = requested_file
+                    if base_name.endswith(".txt"):
+                        base_name = base_name[:-4] + ".json"
+                    
+                    # Strategy 1: Match by report_path LIKE
+                    cursor.execute("SELECT * FROM executions WHERE report_path LIKE ? LIMIT 1;", (f"%{base_name}%",))
                     exec_row = cursor.fetchone()
+                    
+                    # Strategy 2: Match by timestamp extracted from filename (e.g. report_20260610_091956)
+                    if not exec_row:
+                        import re
+                        ts_match = re.search(r"(\d{8}_\d{6})", requested_file)
+                        if ts_match:
+                            ts_str = ts_match.group(1)
+                            cursor.execute("SELECT * FROM executions WHERE report_path LIKE ? LIMIT 1;", (f"%{ts_str}%",))
+                            exec_row = cursor.fetchone()
+                    
+                    # Strategy 3: Match by run_id if the filename is a UUID
+                    if not exec_row:
+                        name_no_ext = requested_file.rsplit(".", 1)[0]
+                        cursor.execute("SELECT * FROM executions WHERE run_id = ? LIMIT 1;", (name_no_ext,))
+                        exec_row = cursor.fetchone()
                     
                     if exec_row:
                         run_id = exec_row["run_id"]
@@ -229,6 +260,8 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                             
                             self.wfile.write("\n".join(txt_content).encode("utf-8"))
                         return
+                    else:
+                        conn.close()
                 except Exception as e:
                     logger.error(f"Failed to dynamically generate report: {e}")
 
@@ -374,7 +407,7 @@ def query_ollama(error_context: str, query: str) -> str:
     if not is_related:
         return "sorry ! i can't help with this "
 
-    # Build prompt for Gemini
+    # Build prompt for Groq AI
     prompt = f"""You are a Database Verification AI Assistant.
 The system experienced this error:
 {error_context}
@@ -387,39 +420,40 @@ If the query is not related to database errors, verification, database locking, 
 
     try:
         import requests
-        api_key = os.environ.get("GEMINI_API_KEY", "AIzaSyB8ltvrf1u9_d5_TjKauocnkSUm2SqMK5Q")
-        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": prompt}
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.1
-            }
+        api_key = os.environ.get("GROQ_API_KEY", "")
+        if not api_key:
+            logger.warning("GROQ_API_KEY not set. Falling back to expert rules.")
+            raise ValueError("No Groq API key configured")
+        groq_url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
         }
-        logger.info("Sending request to Gemini API...")
-        res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
-        logger.info(f"Gemini API Status Code: {res.status_code}")
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system", "content": "You are a Database Verification AI Assistant. You help users diagnose and fix database backup verification errors. Keep answers professional and concise."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.1,
+            "max_tokens": 1024
+        }
+        logger.info("Sending request to Groq API...")
+        res = requests.post(groq_url, json=payload, headers=headers, timeout=10)
+        logger.info(f"Groq API Status Code: {res.status_code}")
         if res.status_code == 200:
             res_json = res.json()
-            logger.info(f"Gemini API Response JSON: {json.dumps(res_json)}")
-            candidates = res_json.get("candidates", [])
-            if candidates:
-                content = candidates[0].get("content", {})
-                parts = content.get("parts", [])
-                if parts:
-                    text = parts[0].get("text", "").strip()
-                    if text:
-                        return text
-            logger.warning("Failed to extract text parts from Gemini response.")
+            choices = res_json.get("choices", [])
+            if choices:
+                message = choices[0].get("message", {})
+                text = message.get("content", "").strip()
+                if text:
+                    return text
+            logger.warning("Failed to extract text from Groq response.")
         else:
-            logger.warning(f"Gemini API returned non-200 code: {res.text}")
+            logger.warning(f"Groq API returned non-200 code: {res.text}")
     except Exception as e:
-        logger.warning(f"Gemini API error occurred: {e}. Using expert fallback system...")
+        logger.warning(f"Groq API error occurred: {e}. Using expert fallback system...")
         
     # Expert fallback rules
     if "checksum" in error_lower or "checksum" in query_lower:
@@ -474,7 +508,7 @@ I see you asked about: *"{query}"*.
 1. Check your database state and verify your settings inside `config.json`.
 2. Ensure you have terminated open handles to database files to avoid SQLite locks.
 3. Check the real-time system logs under the **Log Console** tab for trace logs.
-4. Verify your internet connection and ensure your Gemini API key in `server.py` is configured and authorized."""
+4. Verify your internet connection and ensure your Groq API key is configured and authorized."""
 
 def run_server():
     # Setup simple console logging for web requests

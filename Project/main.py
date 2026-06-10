@@ -4,6 +4,11 @@ import json
 import argparse
 import logging
 from pathlib import Path
+
+# Self-healing working directory alignment
+if Path("Project").is_dir() and not Path("main.py").exists():
+    os.chdir("Project")
+
 from workflow_agent.orchestrator import run_backup_verification_workflow
 from scheduler import start_scheduler_loop
 
