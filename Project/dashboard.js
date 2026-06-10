@@ -270,33 +270,30 @@ document.addEventListener("DOMContentLoaded", () => {
             const ghRepoInput = document.getElementById("input-github-repo");
 
             if (config.env_github_token_active) {
-                ghTokenInput.value = "";
-                ghTokenInput.placeholder = "•••••••••••••••• (Active Render Env Variable)";
-                ghTokenInput.disabled = true;
+                ghTokenInput.parentElement.style.display = "none";
             } else {
                 ghTokenInput.value = gh.github_token || "";
                 ghTokenInput.placeholder = "Enter GitHub token";
                 ghTokenInput.disabled = false;
+                ghTokenInput.parentElement.style.display = "flex";
             }
 
             if (config.env_github_owner_active) {
-                ghOwnerInput.value = "";
-                ghOwnerInput.placeholder = "Configured via Env Variable (Active)";
-                ghOwnerInput.disabled = true;
+                ghOwnerInput.parentElement.style.display = "none";
             } else {
                 ghOwnerInput.value = gh.repository_owner || "";
                 ghOwnerInput.placeholder = "Username";
                 ghOwnerInput.disabled = false;
+                ghOwnerInput.parentElement.style.display = "flex";
             }
 
             if (config.env_github_repo_active) {
-                ghRepoInput.value = "";
-                ghRepoInput.placeholder = "Configured via Env Variable (Active)";
-                ghRepoInput.disabled = true;
+                ghRepoInput.parentElement.style.display = "none";
             } else {
                 ghRepoInput.value = gh.repository_name || "";
                 ghRepoInput.placeholder = "Repository Name";
                 ghRepoInput.disabled = false;
+                ghRepoInput.parentElement.style.display = "flex";
             }
             
             // Gmail Notifiers
@@ -308,33 +305,30 @@ document.addEventListener("DOMContentLoaded", () => {
             const receiverInput = document.getElementById("input-gmail-receiver");
 
             if (config.env_sender_active) {
-                senderInput.value = "";
-                senderInput.placeholder = "Configured via Render Environment Variable (Active)";
-                senderInput.disabled = true;
+                senderInput.parentElement.style.display = "none";
             } else {
                 senderInput.value = gm.sender_email || "";
                 senderInput.placeholder = "e.g. your-email@gmail.com";
                 senderInput.disabled = false;
+                senderInput.parentElement.style.display = "flex";
             }
 
             if (config.env_password_active) {
-                passInput.value = "";
-                passInput.placeholder = "•••••••••••••••• (Active Render Env Variable)";
-                passInput.disabled = true;
+                passInput.parentElement.style.display = "none";
             } else {
                 passInput.value = gm.sender_password || "";
                 passInput.placeholder = "Enter app password";
                 passInput.disabled = false;
+                passInput.parentElement.style.display = "flex";
             }
 
             if (config.env_receiver_active) {
-                receiverInput.value = "";
-                receiverInput.placeholder = "Configured via Render Environment Variable (Active)";
-                receiverInput.disabled = true;
+                receiverInput.parentElement.style.display = "none";
             } else {
                 receiverInput.value = gm.receiver_email || "";
                 receiverInput.placeholder = "recipient@gmail.com";
                 receiverInput.disabled = false;
+                receiverInput.parentElement.style.display = "flex";
             }
             
             // Fetch workspace database files dynamically
