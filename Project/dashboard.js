@@ -261,76 +261,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // Display Stats target db name
             statTargetDb.textContent = (config.database_path || "backup.db").split("/").pop();
             
-            // GitHub Notifiers
-            const gh = config.github_settings || {};
-            document.getElementById("check-github-enable").checked = gh.enabled || false;
-            
-            const ghTokenInput = document.getElementById("input-github-token");
-            const ghOwnerInput = document.getElementById("input-github-owner");
-            const ghRepoInput = document.getElementById("input-github-repo");
-
-            if (config.env_github_token_active) {
-                ghTokenInput.parentElement.style.display = "none";
-            } else {
-                ghTokenInput.value = gh.github_token || "";
-                ghTokenInput.placeholder = "Enter GitHub token";
-                ghTokenInput.disabled = false;
-                ghTokenInput.parentElement.style.display = "flex";
-            }
-
-            if (config.env_github_owner_active) {
-                ghOwnerInput.parentElement.style.display = "none";
-            } else {
-                ghOwnerInput.value = gh.repository_owner || "";
-                ghOwnerInput.placeholder = "Username";
-                ghOwnerInput.disabled = false;
-                ghOwnerInput.parentElement.style.display = "flex";
-            }
-
-            if (config.env_github_repo_active) {
-                ghRepoInput.parentElement.style.display = "none";
-            } else {
-                ghRepoInput.value = gh.repository_name || "";
-                ghRepoInput.placeholder = "Repository Name";
-                ghRepoInput.disabled = false;
-                ghRepoInput.parentElement.style.display = "flex";
-            }
-            
-            // Gmail Notifiers
-            const gm = config.gmail_settings || {};
-            document.getElementById("check-gmail-enable").checked = gm.enabled || false;
-            
-            const senderInput = document.getElementById("input-gmail-sender");
-            const passInput = document.getElementById("input-gmail-password");
-            const receiverInput = document.getElementById("input-gmail-receiver");
-
-            if (config.env_sender_active) {
-                senderInput.parentElement.style.display = "none";
-            } else {
-                senderInput.value = gm.sender_email || "";
-                senderInput.placeholder = "e.g. your-email@gmail.com";
-                senderInput.disabled = false;
-                senderInput.parentElement.style.display = "flex";
-            }
-
-            if (config.env_password_active) {
-                passInput.parentElement.style.display = "none";
-            } else {
-                passInput.value = gm.sender_password || "";
-                passInput.placeholder = "Enter app password";
-                passInput.disabled = false;
-                passInput.parentElement.style.display = "flex";
-            }
-
-            if (config.env_receiver_active) {
-                receiverInput.parentElement.style.display = "none";
-            } else {
-                receiverInput.value = gm.receiver_email || "";
-                receiverInput.placeholder = "recipient@gmail.com";
-                receiverInput.disabled = false;
-                receiverInput.parentElement.style.display = "flex";
-            }
-            
             // Fetch workspace database files dynamically
             await fetchDatabases();
             
@@ -389,18 +319,18 @@ document.addEventListener("DOMContentLoaded", () => {
             retry_count: parseInt(document.getElementById("input-retry-count").value),
             retry_delay_seconds: parseInt(document.getElementById("input-retry-delay").value),
             github_settings: {
-                enabled: document.getElementById("check-github-enable").checked,
-                github_token: document.getElementById("input-github-token").disabled ? (config_cache.github_settings?.github_token || "") : document.getElementById("input-github-token").value,
-                repository_owner: document.getElementById("input-github-owner").disabled ? (config_cache.github_settings?.repository_owner || "") : document.getElementById("input-github-owner").value,
-                repository_name: document.getElementById("input-github-repo").disabled ? (config_cache.github_settings?.repository_name || "") : document.getElementById("input-github-repo").value
+                enabled: config_cache.github_settings?.enabled !== false,
+                github_token: config_cache.github_settings?.github_token || "",
+                repository_owner: config_cache.github_settings?.repository_owner || "",
+                repository_name: config_cache.github_settings?.repository_name || ""
             },
             gmail_settings: {
-                enabled: document.getElementById("check-gmail-enable").checked,
+                enabled: config_cache.gmail_settings?.enabled !== false,
                 smtp_server: "smtp.gmail.com",
                 smtp_port: 587,
-                sender_email: document.getElementById("input-gmail-sender").disabled ? (gm_settings.sender_email || "") : document.getElementById("input-gmail-sender").value,
-                sender_password: document.getElementById("input-gmail-password").disabled ? (gm_settings.sender_password || "") : document.getElementById("input-gmail-password").value,
-                receiver_email: document.getElementById("input-gmail-receiver").disabled ? (gm_settings.receiver_email || "") : document.getElementById("input-gmail-receiver").value
+                sender_email: gm_settings.sender_email || "",
+                sender_password: gm_settings.sender_password || "",
+                receiver_email: gm_settings.receiver_email || ""
             },
             logging_settings: {
                 level: "INFO",
