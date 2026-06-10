@@ -295,11 +295,43 @@ document.addEventListener("DOMContentLoaded", () => {
                 receiverInput.disabled = false;
             }
             
+            // Fetch workspace database files dynamically
+            await fetchDatabases();
+            
         } catch (err) {
             console.error(err);
             showToast(`Error loading configuration: ${err.message}`, "error");
         }
     }
+
+    const selectDetectedDb = document.getElementById("select-detected-db");
+
+    async function fetchDatabases() {
+        try {
+            const res = await fetch("/api/databases");
+            if (!res.ok) throw new Error("Could not retrieve available databases.");
+            const dbs = await res.json();
+            
+            // Clear dropdown options but keep title
+            selectDetectedDb.innerHTML = '<option value="">-- Detect DB --</option>';
+            dbs.forEach(db => {
+                if (db.error) return;
+                const opt = document.createElement("option");
+                opt.value = db.path;
+                opt.textContent = `${db.name} (${db.size_kb} KB)`;
+                selectDetectedDb.appendChild(opt);
+            });
+        } catch (err) {
+            console.error("Error listing workspace databases:", err);
+        }
+    }
+
+    selectDetectedDb.addEventListener("change", (e) => {
+        if (e.target.value) {
+            document.getElementById("input-db-path").value = e.target.value;
+            showToast(`Selected source database: ${e.target.value}`, "success");
+        }
+    });
 
     // Save configuration form POST handler
     configForm.addEventListener("submit", async (e) => {

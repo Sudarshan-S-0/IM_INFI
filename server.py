@@ -3,6 +3,7 @@ import json
 import sqlite3
 import logging
 from pathlib import Path
+from datetime import datetime
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from workflow_agent.orchestrator import run_backup_verification_workflow
 
@@ -79,6 +80,30 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                 except Exception as e:
                     config_data = {"error": str(e)}
             self.wfile.write(json.dumps(config_data).encode("utf-8"))
+            return
+
+        # API: Get available databases list
+        elif self.path == "/api/databases":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            
+            db_files = []
+            try:
+                for p in Path(".").rglob("*.db"):
+                    # Exclude database files in sandbox, backups, metadata or git directories
+                    parts_lower = [part.lower() for part in p.parts]
+                    if any(x in parts_lower for x in ["sandbox", "backups", "metadata", ".git"]):
+                        continue
+                    db_files.append({
+                        "name": p.name,
+                        "path": p.as_posix(),
+                        "size_kb": round(p.stat().st_size / 1024, 2),
+                        "modified": datetime.fromtimestamp(p.stat().st_mtime).isoformat()
+                    })
+            except Exception as e:
+                db_files = [{"error": str(e)}]
+            self.wfile.write(json.dumps(db_files).encode("utf-8"))
             return
 
         if self.path.startswith("/reports/"):

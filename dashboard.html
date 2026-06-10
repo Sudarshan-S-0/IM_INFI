@@ -104,7 +104,12 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="input-db-path">Database Source Path</label>
-                                <input type="text" id="input-db-path" name="database_path" required>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="input-db-path" name="database_path" required style="flex-grow: 1;">
+                                    <select id="select-detected-db" style="background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); padding: 8px; font-family: var(--font-body); font-size: 13px; max-width: 150px; outline: none; cursor: pointer;">
+                                        <option value="">-- Detect DB --</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="input-backup-dir">Backup Storage Directory</label>
