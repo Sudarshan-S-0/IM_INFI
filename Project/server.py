@@ -88,6 +88,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                     config_data["env_github_token_active"] = "GITHUB_TOKEN" in os.environ
                     config_data["env_github_owner_active"] = "GITHUB_OWNER" in os.environ
                     config_data["env_github_repo_active"] = "GITHUB_REPO" in os.environ
+                    config_data["env_groq_active"] = "GROQ_API_KEY" in os.environ
                 except Exception as e:
                     config_data = {"error": str(e)}
             self.wfile.write(json.dumps(config_data).encode("utf-8"))
@@ -385,7 +386,7 @@ def query_ollama(error_context: str, query: str) -> str:
     if not is_related:
         return "sorry ! i can't help with this "
 
-    # Build prompt for Gemini
+    # Build prompt for Groq AI
     prompt = f"""You are a Database Verification AI Assistant.
 The system experienced this error:
 {error_context}
@@ -398,39 +399,40 @@ If the query is not related to database errors, verification, database locking, 
 
     try:
         import requests
-        api_key = os.environ.get("GEMINI_API_KEY", "AIzaSyB8ltvrf1u9_d5_TjKauocnkSUm2SqMK5Q")
-        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": prompt}
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.1
-            }
+        api_key = os.environ.get("GROQ_API_KEY", "")
+        if not api_key:
+            logger.warning("GROQ_API_KEY not set. Falling back to expert rules.")
+            raise ValueError("No Groq API key configured")
+        groq_url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
         }
-        logger.info("Sending request to Gemini API...")
-        res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
-        logger.info(f"Gemini API Status Code: {res.status_code}")
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system", "content": "You are a Database Verification AI Assistant. You help users diagnose and fix database backup verification errors. Keep answers professional and concise."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.1,
+            "max_tokens": 1024
+        }
+        logger.info("Sending request to Groq API...")
+        res = requests.post(groq_url, json=payload, headers=headers, timeout=10)
+        logger.info(f"Groq API Status Code: {res.status_code}")
         if res.status_code == 200:
             res_json = res.json()
-            logger.info(f"Gemini API Response JSON: {json.dumps(res_json)}")
-            candidates = res_json.get("candidates", [])
-            if candidates:
-                content = candidates[0].get("content", {})
-                parts = content.get("parts", [])
-                if parts:
-                    text = parts[0].get("text", "").strip()
-                    if text:
-                        return text
-            logger.warning("Failed to extract text parts from Gemini response.")
+            choices = res_json.get("choices", [])
+            if choices:
+                message = choices[0].get("message", {})
+                text = message.get("content", "").strip()
+                if text:
+                    return text
+            logger.warning("Failed to extract text from Groq response.")
         else:
-            logger.warning(f"Gemini API returned non-200 code: {res.text}")
+            logger.warning(f"Groq API returned non-200 code: {res.text}")
     except Exception as e:
-        logger.warning(f"Gemini API error occurred: {e}. Using expert fallback system...")
+        logger.warning(f"Groq API error occurred: {e}. Using expert fallback system...")
         
     # Expert fallback rules
     if "checksum" in error_lower or "checksum" in query_lower:
@@ -485,7 +487,7 @@ I see you asked about: *"{query}"*.
 1. Check your database state and verify your settings inside `config.json`.
 2. Ensure you have terminated open handles to database files to avoid SQLite locks.
 3. Check the real-time system logs under the **Log Console** tab for trace logs.
-4. Verify your internet connection and ensure your Gemini API key in `server.py` is configured and authorized."""
+4. Verify your internet connection and ensure your Groq API key is configured and authorized."""
 
 def run_server():
     # Setup simple console logging for web requests
