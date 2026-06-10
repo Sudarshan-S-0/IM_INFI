@@ -55,7 +55,7 @@ Validation Details:
                 error_message=msg
             )
     else:
-        gmail_ok = send_gmail_notification(config, subject, body_text)
+        gmail_ok, gmail_err = send_gmail_notification(config, subject, body_text)
         outcomes["gmail"] = "SUCCESS" if gmail_ok else "FAILED"
         if metadata_store:
             metadata_store.log_notification(
@@ -63,7 +63,7 @@ Validation Details:
                 notif_type="Gmail",
                 status="SUCCESS" if gmail_ok else "FAIL",
                 target=target_email,
-                error_message=None if gmail_ok else "Check logs for SMTP error"
+                error_message=None if gmail_ok else f"SMTP Error: {gmail_err}"
             )
         
     # 3. GitHub Notifier (only triggers if validation fails)
