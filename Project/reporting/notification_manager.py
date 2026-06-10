@@ -32,17 +32,39 @@ Validation Details:
     outcomes = {}
     
     # 2. Gmail notifier
-    gmail_ok = send_gmail_notification(config, subject, body_text)
-    outcomes["gmail"] = "SUCCESS" if gmail_ok else "FAILED"
-    if metadata_store:
-        target_email = config.get("gmail_settings", {}).get("receiver_email", "unknown")
-        metadata_store.log_notification(
-            run_id=run_id,
-            notif_type="Gmail",
-            status="SUCCESS" if gmail_ok else "FAIL",
-            target=target_email,
-            error_message=None if gmail_ok else "Check logs for SMTP error"
-        )
+    import os
+    gmail_settings = config.get("gmail_settings", {})
+    sender = os.environ.get("SENDER_EMAIL", gmail_settings.get("sender_email"))
+    password = os.environ.get("SENDER_PASSWORD", os.environ.get("APP_PASSWORD", gmail_settings.get("sender_password")))
+    receiver = os.environ.get("RECEIVER_EMAIL", gmail_settings.get("receiver_email"))
+    
+    gmail_enabled = gmail_settings.get("enabled", False)
+    gmail_creds_missing = not sender or sender == "YOUR_EMAIL@gmail.com" or not password or password == "YOUR_APP_PASSWORD" or not receiver or receiver == "RECIPIENT_EMAIL@gmail.com"
+
+    target_email = os.environ.get("RECEIVER_EMAIL", config.get("gmail_settings", {}).get("receiver_email", "unknown"))
+
+    if not gmail_enabled or gmail_creds_missing:
+        outcomes["gmail"] = "SKIPPED"
+        if metadata_store:
+            msg = "Gmail notifier disabled" if not gmail_enabled else "SMTP credentials not configured"
+            metadata_store.log_notification(
+                run_id=run_id,
+                notif_type="Gmail",
+                status="SKIPPED",
+                target=target_email,
+                error_message=msg
+            )
+    else:
+        gmail_ok, gmail_err = send_gmail_notification(config, subject, body_text)
+        outcomes["gmail"] = "SUCCESS" if gmail_ok else "FAILED"
+        if metadata_store:
+            metadata_store.log_notification(
+                run_id=run_id,
+                notif_type="Gmail",
+                status="SUCCESS" if gmail_ok else "FAIL",
+                target=target_email,
+                error_message=None if gmail_ok else f"SMTP Error: {gmail_err}"
+            )
         
     # 3. GitHub Notifier (only triggers if validation fails)
     if overall_status == "FAIL":

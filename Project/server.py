@@ -83,7 +83,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                         config_data = json.load(f)
                     # Expose environment override status to frontend UI
                     config_data["env_sender_active"] = "SENDER_EMAIL" in os.environ
-                    config_data["env_password_active"] = "SENDER_PASSWORD" in os.environ
+                    config_data["env_password_active"] = "SENDER_PASSWORD" in os.environ or "APP_PASSWORD" in os.environ
                     config_data["env_receiver_active"] = "RECEIVER_EMAIL" in os.environ
                     config_data["env_github_token_active"] = "GITHUB_TOKEN" in os.environ
                     config_data["env_github_owner_active"] = "GITHUB_OWNER" in os.environ
@@ -144,6 +144,24 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                 except Exception as e:
                     notifications = [{"error": str(e)}]
             self.wfile.write(json.dumps(notifications).encode("utf-8"))
+            return
+
+        # API: Poll for background run status
+        elif self.path == "/api/run-status":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            
+            in_progress = getattr(DashboardHTTPRequestHandler, '_run_in_progress', False)
+            result = getattr(DashboardHTTPRequestHandler, '_run_result', None)
+            
+            if in_progress:
+                self.wfile.write(json.dumps({"status": "running"}).encode("utf-8"))
+            elif result:
+                self.wfile.write(json.dumps({"status": "done", "result": result}).encode("utf-8"))
+                DashboardHTTPRequestHandler._run_result = None
+            else:
+                self.wfile.write(json.dumps({"status": "idle"}).encode("utf-8"))
             return
 
         if self.path.startswith("/reports/"):
@@ -323,25 +341,43 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response_data).encode("utf-8"))
             return
 
-        # API: Trigger backup verification workflow run
+        # API: Trigger backup verification workflow run (background thread)
         if self.path == "/api/run":
+            import threading
+            
+            # Check if a run is already in progress
+            if getattr(DashboardHTTPRequestHandler, '_run_in_progress', False):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": "A verification run is already in progress. Please wait."}).encode("utf-8"))
+                return
+            
+            DashboardHTTPRequestHandler._run_in_progress = True
+            DashboardHTTPRequestHandler._run_result = None
+            
+            def background_run():
+                try:
+                    config_path = Path("config.json")
+                    with config_path.open("r", encoding="utf-8") as f:
+                        config = json.load(f)
+                    success = run_backup_verification_workflow(config, "config.json")
+                    DashboardHTTPRequestHandler._run_result = {"success": True, "result": "PASS" if success else "FAIL"}
+                except Exception as e:
+                    DashboardHTTPRequestHandler._run_result = {"success": False, "error": str(e)}
+                finally:
+                    DashboardHTTPRequestHandler._run_in_progress = False
+            
+            thread = threading.Thread(target=background_run, daemon=True)
+            thread.start()
+            
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            
-            response_data = {"success": False}
-            try:
-                config_path = Path("config.json")
-                with config_path.open("r", encoding="utf-8") as f:
-                    config = json.load(f)
-                # Run the orchestrator workflow
-                success = run_backup_verification_workflow(config, "config.json")
-                response_data = {"success": True, "result": "PASS" if success else "FAIL"}
-            except Exception as e:
-                response_data = {"success": False, "error": str(e)}
-                
-            self.wfile.write(json.dumps(response_data).encode("utf-8"))
+            self.wfile.write(json.dumps({"success": True, "started": True}).encode("utf-8"))
             return
+
+            
             
         # API: Save configuration
         if self.path == "/api/config":

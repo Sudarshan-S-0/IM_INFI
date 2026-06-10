@@ -261,82 +261,6 @@ document.addEventListener("DOMContentLoaded", () => {
             // Display Stats target db name
             statTargetDb.textContent = (config.database_path || "backup.db").split("/").pop();
             
-            // GitHub Notifiers
-            const gh = config.github_settings || {};
-            document.getElementById("check-github-enable").checked = gh.enabled || false;
-            
-            const ghTokenInput = document.getElementById("input-github-token");
-            const ghOwnerInput = document.getElementById("input-github-owner");
-            const ghRepoInput = document.getElementById("input-github-repo");
-
-            if (config.env_github_token_active) {
-                ghTokenInput.value = "";
-                ghTokenInput.placeholder = "•••••••••••••••• (Active Render Env Variable)";
-                ghTokenInput.disabled = true;
-            } else {
-                ghTokenInput.value = gh.github_token || "";
-                ghTokenInput.placeholder = "Enter GitHub token";
-                ghTokenInput.disabled = false;
-            }
-
-            if (config.env_github_owner_active) {
-                ghOwnerInput.value = "";
-                ghOwnerInput.placeholder = "Configured via Env Variable (Active)";
-                ghOwnerInput.disabled = true;
-            } else {
-                ghOwnerInput.value = gh.repository_owner || "";
-                ghOwnerInput.placeholder = "Username";
-                ghOwnerInput.disabled = false;
-            }
-
-            if (config.env_github_repo_active) {
-                ghRepoInput.value = "";
-                ghRepoInput.placeholder = "Configured via Env Variable (Active)";
-                ghRepoInput.disabled = true;
-            } else {
-                ghRepoInput.value = gh.repository_name || "";
-                ghRepoInput.placeholder = "Repository Name";
-                ghRepoInput.disabled = false;
-            }
-            
-            // Gmail Notifiers
-            const gm = config.gmail_settings || {};
-            document.getElementById("check-gmail-enable").checked = gm.enabled || false;
-            
-            const senderInput = document.getElementById("input-gmail-sender");
-            const passInput = document.getElementById("input-gmail-password");
-            const receiverInput = document.getElementById("input-gmail-receiver");
-
-            if (config.env_sender_active) {
-                senderInput.value = "";
-                senderInput.placeholder = "Configured via Render Environment Variable (Active)";
-                senderInput.disabled = true;
-            } else {
-                senderInput.value = gm.sender_email || "";
-                senderInput.placeholder = "e.g. your-email@gmail.com";
-                senderInput.disabled = false;
-            }
-
-            if (config.env_password_active) {
-                passInput.value = "";
-                passInput.placeholder = "•••••••••••••••• (Active Render Env Variable)";
-                passInput.disabled = true;
-            } else {
-                passInput.value = gm.sender_password || "";
-                passInput.placeholder = "Enter app password";
-                passInput.disabled = false;
-            }
-
-            if (config.env_receiver_active) {
-                receiverInput.value = "";
-                receiverInput.placeholder = "Configured via Render Environment Variable (Active)";
-                receiverInput.disabled = true;
-            } else {
-                receiverInput.value = gm.receiver_email || "";
-                receiverInput.placeholder = "recipient@gmail.com";
-                receiverInput.disabled = false;
-            }
-            
             // Fetch workspace database files dynamically
             await fetchDatabases();
             
@@ -395,24 +319,24 @@ document.addEventListener("DOMContentLoaded", () => {
             retry_count: parseInt(document.getElementById("input-retry-count").value),
             retry_delay_seconds: parseInt(document.getElementById("input-retry-delay").value),
             github_settings: {
-                enabled: document.getElementById("check-github-enable").checked,
-                github_token: document.getElementById("input-github-token").disabled ? (config_cache.github_settings?.github_token || "") : document.getElementById("input-github-token").value,
-                repository_owner: document.getElementById("input-github-owner").disabled ? (config_cache.github_settings?.repository_owner || "") : document.getElementById("input-github-owner").value,
-                repository_name: document.getElementById("input-github-repo").disabled ? (config_cache.github_settings?.repository_name || "") : document.getElementById("input-github-repo").value
+                enabled: config_cache.github_settings?.enabled !== false,
+                github_token: config_cache.github_settings?.github_token || "",
+                repository_owner: config_cache.github_settings?.repository_owner || "",
+                repository_name: config_cache.github_settings?.repository_name || ""
             },
             gmail_settings: {
-                enabled: document.getElementById("check-gmail-enable").checked,
+                enabled: config_cache.gmail_settings?.enabled !== false,
                 smtp_server: "smtp.gmail.com",
                 smtp_port: 587,
-                sender_email: document.getElementById("input-gmail-sender").disabled ? (gm_settings.sender_email || "") : document.getElementById("input-gmail-sender").value,
-                sender_password: document.getElementById("input-gmail-password").disabled ? (gm_settings.sender_password || "") : document.getElementById("input-gmail-password").value,
-                receiver_email: document.getElementById("input-gmail-receiver").disabled ? (gm_settings.receiver_email || "") : document.getElementById("input-gmail-receiver").value
+                sender_email: gm_settings.sender_email || "",
+                sender_password: gm_settings.sender_password || "",
+                receiver_email: gm_settings.receiver_email || ""
             },
             logging_settings: {
                 level: "INFO",
                 file_path: "logs/backup_verification.log"
             },
-            validation_metrics: {
+            validation_metrics: config_cache.validation_metrics || {
                 "backup.db": {
                     "expected_tables": ["users", "orders", "products"],
                     "expected_counts": { "users": 3, "orders": 3, "products": 3 },
@@ -420,24 +344,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         "users": "dfd7ed9f21512bee326e4f877fdcc585574137bc0fd326739bc461ee71641205",
                         "orders": "f1895a2d95312281a5e6e77672e826d827975f338c44e5e0f98984610a6af61d",
                         "products": "5080070d5b9a9e08f93174feff6dd1b1cfeccae9dfeb76952a8959892286c1d6"
-                    }
-                },
-                "backup_new.db": {
-                    "expected_tables": ["users", "orders", "products"],
-                    "expected_counts": { "users": 4, "orders": 4, "products": 4 },
-                    "expected_checksums": {
-                        "users": "b06940bde3c740413e9c5144d54260871a5e4da1838a0b2f1269905c95bf0bd0",
-                        "orders": "d504419cc9e8309b1f3db1d58e38466e382292173db44866a1fa0897a7271e9e",
-                        "products": "30c502b54c8fa4a33b9a4ad154d34b16f396a9d107f3601d2ee78e88f307f3de"
-                    }
-                },
-                "backup_dummy.db": {
-                    "expected_tables": ["users", "orders", "products"],
-                    "expected_counts": { "users": 5, "orders": 5, "products": 5 },
-                    "expected_checksums": {
-                        "users": "89e24979043f200cdafb98cb68eb62ef3d28feca3b3fb05559ad3b5bae2d694e",
-                        "orders": "bcc2f93148098305c0a645d5aa38c685791b4bcea98fc3b925f7aa33c49ef9b8",
-                        "products": "c6d3fd1ebde8ee7f3b422baeae70c9167d9d2834f42381a4eb3f6aaa0bfae05f"
                     }
                 }
             }
@@ -473,28 +379,54 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch("/api/run", { method: "POST" });
             const data = await res.json();
             
-            if (data.success) {
-                if (data.result === "PASS") {
-                    showToast("Verification PASS! Backup is complete and fully validated.", "success");
-                } else {
-                    showToast("Verification FAIL! Database validation checks encountered errors.", "error");
-                }
-                
-                // Refresh execution logs and list views
-                await fetchExecutions();
-                await fetchLogs();
-                
-                // Open modal detail for the newest run immediately
-                if (executionsCache.length > 0) {
-                    showExecutionDetails(executionsCache[0].run_id);
-                }
-            } else {
-                throw new Error(data.error || "Failed to complete run.");
+            if (!data.success) {
+                throw new Error(data.error || "Failed to start run.");
             }
+            
+            // Poll for completion
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusRes = await fetch("/api/run-status");
+                    const statusData = await statusRes.json();
+                    
+                    if (statusData.status === "done") {
+                        clearInterval(pollInterval);
+                        
+                        const result = statusData.result;
+                        if (result && result.success) {
+                            if (result.result === "PASS") {
+                                showToast("Verification PASS! Backup is complete and fully validated.", "success");
+                            } else {
+                                showToast("Verification FAIL! Database validation checks encountered errors.", "error");
+                            }
+                        } else {
+                            showToast(`Verification completed with error: ${result?.error || "Unknown"}`, "error");
+                        }
+                        
+                        // Refresh execution logs and list views
+                        await fetchExecutions();
+                        await fetchLogs();
+                        
+                        // Open modal detail for the newest run immediately
+                        if (executionsCache.length > 0) {
+                            showExecutionDetails(executionsCache[0].run_id);
+                        }
+                        
+                        triggerRunBtn.disabled = false;
+                        btnSpinner.style.display = "none";
+                        btnText.textContent = "⚡ Trigger Run";
+                    } else if (statusData.status === "running") {
+                        btnText.textContent = "⏳ Running...";
+                    }
+                } catch (pollErr) {
+                    // Silently retry on poll errors
+                    console.error("Poll error:", pollErr);
+                }
+            }, 2000); // Poll every 2 seconds
+            
         } catch (err) {
             console.error(err);
             showToast(`Workflow execution failed: ${err.message}`, "error");
-        } finally {
             triggerRunBtn.disabled = false;
             btnSpinner.style.display = "none";
             btnText.textContent = "⚡ Trigger Run";
