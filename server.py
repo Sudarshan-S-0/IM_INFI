@@ -137,6 +137,8 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
         if self.path.startswith("/reports/"):
             requested_file = os.path.basename(self.path)
             full_path = Path("reports") / requested_file
+            
+            # 1. If file exists physically on disk, serve it directly
             if full_path.exists() and full_path.is_file():
                 self.send_response(200)
                 content_types = {
@@ -149,6 +151,86 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                 with full_path.open("rb") as f:
                     self.wfile.write(f.read())
                 return
+
+            # 2. Re-generate report dynamically from metadata database if missing (Render ephemeral fallback)
+            db_path = Path("metadata/metadata.db")
+            if db_path.exists():
+                try:
+                    conn = sqlite3.connect(db_path)
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    
+                    # Search using the JSON equivalent filename
+                    json_filename = requested_file.replace(".txt", ".json")
+                    cursor.execute("SELECT * FROM executions WHERE report_path LIKE ? LIMIT 1;", (f"%{json_filename}",))
+                    exec_row = cursor.fetchone()
+                    
+                    if exec_row:
+                        run_id = exec_row["run_id"]
+                        backup_file = exec_row["backup_file"]
+                        timestamp = exec_row["timestamp"]
+                        status = exec_row["validation_status"]
+                        error_details = exec_row["error_details"]
+                        
+                        # Get validation results details
+                        cursor.execute("SELECT * FROM validation_results WHERE run_id = ?;", (run_id,))
+                        results_rows = cursor.fetchall()
+                        
+                        # Reconstruct validation results
+                        validation_results = {
+                            "overall_status": status,
+                        }
+                        if results_rows:
+                            r = results_rows[0]
+                            validation_results.update({
+                                "table_check": r["table_check"],
+                                "row_count_check": r["row_count_check"],
+                                "checksum_check": r["checksum_check"],
+                                "integrity_check": r["integrity_check"]
+                            })
+                        if error_details:
+                            validation_results["error"] = error_details
+                        
+                        conn.close()
+                        
+                        self.send_response(200)
+                        if requested_file.endswith(".json"):
+                            self.send_header("Content-Type", "application/json")
+                            self.send_header("Content-Disposition", f"attachment; filename=\"{requested_file}\"")
+                            self.end_headers()
+                            report_data = {
+                                "run_id": run_id,
+                                "backup_name": backup_file,
+                                "timestamp": timestamp,
+                                "validation_results": validation_results
+                            }
+                            self.wfile.write(json.dumps(report_data, indent=4).encode("utf-8"))
+                        else:
+                            self.send_header("Content-Type", "text/plain")
+                            self.send_header("Content-Disposition", f"attachment; filename=\"{requested_file}\"")
+                            self.end_headers()
+                            txt_content = []
+                            txt_content.append("=========================================")
+                            txt_content.append("   BACKUP VERIFICATION RUN REPORT        ")
+                            txt_content.append("=========================================")
+                            txt_content.append(f"Run ID:      {run_id}")
+                            txt_content.append(f"Backup File: {backup_file}")
+                            txt_content.append(f"Timestamp:   {timestamp}")
+                            txt_content.append(f"Status:      {status}")
+                            txt_content.append("-----------------------------------------")
+                            txt_content.append("Validation Stages:")
+                            txt_content.append(f"  - Table existence: {validation_results.get('table_check', 'FAIL')}")
+                            txt_content.append(f"  - Row count check: {validation_results.get('row_count_check', 'FAIL')}")
+                            txt_content.append(f"  - Checksums check: {validation_results.get('checksum_check', 'FAIL')}")
+                            txt_content.append(f"  - Integrity check: {validation_results.get('integrity_check', 'FAIL')}")
+                            txt_content.append("=========================================")
+                            if error_details:
+                                txt_content.append(f"\nErrors:\n{error_details}")
+                            
+                            self.wfile.write("\n".join(txt_content).encode("utf-8"))
+                        return
+                except Exception as e:
+                    logger.error(f"Failed to dynamically generate report: {e}")
 
         # Static file routing
         file_map = {
