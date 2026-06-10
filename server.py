@@ -69,6 +69,10 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                 try:
                     with config_path.open("r", encoding="utf-8") as f:
                         config_data = json.load(f)
+                    # Expose environment override status to frontend UI
+                    config_data["env_sender_active"] = "SENDER_EMAIL" in os.environ
+                    config_data["env_password_active"] = "SENDER_PASSWORD" in os.environ
+                    config_data["env_receiver_active"] = "RECEIVER_EMAIL" in os.environ
                 except Exception as e:
                     config_data = {"error": str(e)}
             self.wfile.write(json.dumps(config_data).encode("utf-8"))
