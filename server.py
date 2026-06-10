@@ -3,7 +3,7 @@ import json
 import sqlite3
 import logging
 from pathlib import Path
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from workflow_agent.orchestrator import run_backup_verification_workflow
 
 PORT = 8000
@@ -69,6 +69,13 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
                 try:
                     with config_path.open("r", encoding="utf-8") as f:
                         config_data = json.load(f)
+                    # Expose environment override status to frontend UI
+                    config_data["env_sender_active"] = "SENDER_EMAIL" in os.environ
+                    config_data["env_password_active"] = "SENDER_PASSWORD" in os.environ
+                    config_data["env_receiver_active"] = "RECEIVER_EMAIL" in os.environ
+                    config_data["env_github_token_active"] = "GITHUB_TOKEN" in os.environ
+                    config_data["env_github_owner_active"] = "GITHUB_OWNER" in os.environ
+                    config_data["env_github_repo_active"] = "GITHUB_REPO" in os.environ
                 except Exception as e:
                     config_data = {"error": str(e)}
             self.wfile.write(json.dumps(config_data).encode("utf-8"))
@@ -94,6 +101,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
         file_map = {
             "/": "index.html",
             "/index.html": "index.html",
+            "/dashboard.html": "dashboard.html",
             "/dashboard.css": "dashboard.css",
             "/dashboard.js": "dashboard.js"
         }
@@ -120,6 +128,33 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"File not found.")
 
     def do_POST(self):
+        # API: Authentication Login Verification
+        if self.path == "/api/login":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            
+            response_data = {"authenticated": False}
+            try:
+                credentials = json.loads(post_data.decode("utf-8"))
+                username = credentials.get("username", "")
+                password = credentials.get("password", "")
+                
+                # Check environment variables or defaults
+                expected_user = os.environ.get("ADMIN_USER", "admin")
+                expected_pass = os.environ.get("ADMIN_PASSWORD", "admin123")
+                
+                if username == expected_user and password == expected_pass:
+                    response_data = {"authenticated": True}
+            except Exception as e:
+                response_data = {"authenticated": False, "error": str(e)}
+                
+            self.wfile.write(json.dumps(response_data).encode("utf-8"))
+            return
+
         # API: Trigger backup verification workflow run
         if self.path == "/api/run":
             self.send_response(200)
@@ -141,7 +176,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
             return
             
         # API: Save configuration
-        elif self.path == "/api/config":
+        if self.path == "/api/config":
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             
@@ -163,7 +198,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
             return
 
         # API: AI Assistant
-        elif self.path == "/api/ai":
+        if self.path == "/api/ai":
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             
@@ -218,7 +253,7 @@ If the query is not related to database errors, verification, database locking, 
     try:
         import requests
         api_key = os.environ.get("GEMINI_API_KEY", "AIzaSyB8ltvrf1u9_d5_TjKauocnkSUm2SqMK5Q")
-        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
         payload = {
             "contents": [
                 {
@@ -312,7 +347,7 @@ def run_server():
     
     port = int(os.environ.get("PORT", PORT))
     server_address = ("0.0.0.0", port)
-    httpd = HTTPServer(server_address, DashboardHTTPRequestHandler)
+    httpd = ThreadingHTTPServer(server_address, DashboardHTTPRequestHandler)
     print(f"Dashboard server running at: http://0.0.0.0:{port}")
     try:
         httpd.serve_forever()

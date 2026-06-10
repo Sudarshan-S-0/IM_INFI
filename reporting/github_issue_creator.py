@@ -10,11 +10,12 @@ def create_github_issue(config: dict, title: str, body: str) -> bool:
         logger.info("GitHub notifier is disabled.")
         return False
         
-    token = github_settings.get("github_token")
-    owner = github_settings.get("repository_owner")
-    repo = github_settings.get("repository_name")
+    import os
+    token = os.environ.get("GITHUB_TOKEN", github_settings.get("github_token"))
+    owner = os.environ.get("GITHUB_OWNER", github_settings.get("repository_owner"))
+    repo = os.environ.get("GITHUB_REPO", github_settings.get("repository_name"))
     
-    if not token or token == "YOUR_GITHUB_TOKEN" or not owner or not repo:
+    if not token or token == "YOUR_GITHUB_TOKEN" or not owner or owner == "YOUR_GITHUB_OWNER" or not repo or repo == "YOUR_GITHUB_REPO":
         logger.warning("GitHub settings are incomplete. Skipping issue creation.")
         return False
         
