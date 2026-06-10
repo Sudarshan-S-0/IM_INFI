@@ -169,7 +169,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
             return
             
         # API: Save configuration
-        elif self.path == "/api/config":
+        if self.path == "/api/config":
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             
@@ -191,7 +191,7 @@ class DashboardHTTPRequestHandler(BaseHTTPRequestHandler):
             return
 
         # API: AI Assistant
-        elif self.path == "/api/ai":
+        if self.path == "/api/ai":
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             
