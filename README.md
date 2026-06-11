@@ -172,6 +172,10 @@ IM_INFI/
    python webapp.py
    ```
 
+## 🆕 Recent Updates
+- **Sandbox Management Improvement**: Updated the `restore.py` module to safely empty the `sandbox` directory during backup validation. Instead of completely deleting and recreating the entire directory, it now selectively removes database files while preserving tracking files like `.gitkeep`. This ensures seamless integration with Git while maintaining a clean environment for testing restored databases.
+
+
 ## 📈 Expected Outcome
 The system ensures that backups are not only stored but also tested and validated regularly, improving confidence in disaster recovery and minimizing the risk of backup failures.
 

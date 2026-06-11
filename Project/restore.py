@@ -11,8 +11,14 @@ def create_sandbox(sandbox_dir: Path) -> Path:
     sandbox_dir = Path(sandbox_dir)
     if sandbox_dir.exists():
         logger.info(f"Cleaning sandbox directory: {sandbox_dir}")
-        shutil.rmtree(sandbox_dir)
-    sandbox_dir.mkdir(parents=True, exist_ok=True)
+        for item in sandbox_dir.iterdir():
+            if item.name != ".gitkeep":
+                if item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+    else:
+        sandbox_dir.mkdir(parents=True, exist_ok=True)
     return sandbox_dir
 
 def restore_backup(backup_path: Path, sandbox_dir: Path, restored_name: str = "restored.db") -> Path:
